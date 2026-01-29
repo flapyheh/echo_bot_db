@@ -7,27 +7,30 @@ from app_bot.bot.infrastructure.database.connection import get_pg_connection
 from config.config import Config, load_config
 from psycopg import AsyncConnection, Error
 
-config : Config = load_config()
+config: Config = load_config()
+
 logging.basicConfig(
-    level= config.log.level,
-    format= config.log.format
+    level=logging.getLevelName(level=config.log.level),
+    format=config.log.format,
 )
 
 logger = logging.getLogger(__name__)
 
 if sys.platform.startswith("win") or os.name == "nt":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    
-async def main() -> None:
-    connection = get_pg_connection(
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+async def main():
+    connection: AsyncConnection | None = None
+
+    try:
+        connection = await get_pg_connection(
             db_name=config.db.name,
             host=config.db.host,
             port=config.db.port,
             user=config.db.user,
             password=config.db.password,
         )
-    
-    try:
         async with connection:
             async with connection.transaction():
                 async with connection.cursor() as cursor:
@@ -58,8 +61,7 @@ async def main() -> None:
                             ON activity (user_id, activity_date);
                         """
                     )
-                    logger.info('Tables `users` and `activity` were successfully created')
-                    
+                logger.info("Tables `users` and `activity` were successfully created")
     except Error as db_error:
         logger.exception("Database-specific error: %s", db_error)
     except Exception as e:
@@ -67,6 +69,7 @@ async def main() -> None:
     finally:
         if connection:
             connection.close()
-            logger.info('PostgresQL connection closed')
-            
+            logger.info("Connection to Postgres closed")
+
+
 asyncio.run(main())

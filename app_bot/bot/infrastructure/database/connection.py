@@ -6,7 +6,7 @@ from psycopg_pool import AsyncConnectionPool
 
 logger = logging.getLogger(__name__)
 
-async def build_pg_conninfo(
+def build_pg_conninfo(
     db_name: str,
     host: str,
     port: int,
@@ -41,12 +41,12 @@ async def get_pg_connection(
     connifo = build_pg_conninfo(db_name, host, port, user, password)
     try:
         connection = await AsyncConnection.connect(conninfo= connifo)
-        await log_db_version(connection=connection)
+        await log_db_version(conn=connection)
         return connection
     except Exception as e:
         logger.exception("Failed to connect to PostgreSQL: %s", e)
         if connection:
-            await connection.close()
+            connection.close()
         raise
 
 async def get_pg_pooldb(
